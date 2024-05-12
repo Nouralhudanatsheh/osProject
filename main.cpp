@@ -30,11 +30,18 @@ private:
   void ganttChartandDetails(vector<Process> processes, float cpuTime,
                             float idleTime) {
 
+    // lines for loop
+    if (processes[0].arrivalTime != 0) {
+      cout << "|";
+      for (int k = 0; k < processes[0].arrivalTime; k++)
+        cout << "-";
+    }
     for (int i = 0; i < processes.size(); i++) {
       cout << "|";
-      if (i > 1 && processes[i].arrivalTime > processes[i - 1].finishTime) {
+
+      if (i > 0 && processes[i].startTime > processes[i - 1].finishTime) {
         for (int k = 0;
-             k < processes[i].arrivalTime - processes[i - 1].finishTime; k++)
+             k < processes[i].startTime - processes[i - 1].finishTime; k++)
           cout << "-";
         cout << "|";
       }
@@ -46,11 +53,19 @@ private:
       }
     }
     cout << "|\n";
+
+    // numbers for loop
+    if (processes[0].arrivalTime != 0) {
+      cout << 0;
+      for (int k = 0; k < processes[0].arrivalTime; k++)
+        cout << " ";
+    }
     for (int i = 0; i < processes.size(); i++) {
-      if (i > 1 && processes[i].arrivalTime > processes[i - 1].finishTime) {
+      if (i > 0 && processes[i].finishTime > processes[i - 1].finishTime) {
         cout << processes[i - 1].finishTime;
         for (int k = 0;
-             k < processes[i].arrivalTime - processes[i - 1].finishTime; k++)
+             k < processes[i].startTime - processes[i - 1].finishTime * 1.05;
+             k++)
           cout << " ";
       }
 
@@ -135,7 +150,7 @@ public:
             sortedProcesses[i].startTime - sortedProcesses[i].arrivalTime;
         cpuTime += sortedProcesses[i].cpuBursts;
       }
-
+      cout << "First Come First Served Algorithm\n\n";
       ganttChartandDetails(sortedProcesses, cpuTime, idleTime);
       // cout << " cpu time = " << cpuTime << " idle time = " << idleTime
       //      << " cpu utilization time =  " << (cpuTime - idleTime) / cpuTime;
