@@ -135,12 +135,15 @@ public:
 
       for (int i = 1; i < processes.size(); i++) {
 
-        if (sortedProcesses[i].arrivalTime > cpuTime) {
+        if (sortedProcesses[i].arrivalTime > cpuTime &&
+            sortedProcesses[i].arrivalTime >= cpuTime + contextSwitch) {
           idleTime += sortedProcesses[i].arrivalTime - cpuTime;
           cpuTime += sortedProcesses[i].arrivalTime - cpuTime;
+        } else {
+          cpuTime += contextSwitch;
+          idleTime += contextSwitch;
         }
-        cpuTime += contextSwitch;
-        idleTime += contextSwitch;
+
         sortedProcesses[i].startTime = cpuTime;
         sortedProcesses[i].finishTime =
             sortedProcesses[i].startTime + sortedProcesses[i].cpuBursts;
