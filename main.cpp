@@ -251,54 +251,97 @@ public:
 
       for (int i = 0; i < processes.size(); i++)
         processes[i].remainingBursts = processes[i].cpuBursts;
-      Process *currentProcess = &processes[0];
+      // Process *currentProcess = &processes[0];
       float cpuTime = processes[0].arrivalTime;
       float idleTime = processes[0].arrivalTime;
       vector<Process> RR;
+
+      Process currentProcess = processes[0];
       int tempST;
       int flag = 0;
-      for (int i = 0; flag != n - 1;) {
-        flag = 0;
-        if (arr[i] > 0) {
-          if (ceil(processes[i].cpuBursts / quantum) == arr[i]) {
-            (*currentProcess).startTime = tempST = cpuTime;
-            (*currentProcess).waitingTime +=
-                (*currentProcess).startTime - (*currentProcess).arrivalTime;
-          } else {
-            tempST = cpuTime;
-            (*currentProcess).waitingTime +=
-                (*currentProcess).startTime - (*currentProcess).finishTime;
-          }
+      int j;
+      for (int i = 0; flag < n; i++) {
+        currentProcess.startTime = cpuTime;
 
-          if ((*currentProcess).remainingBursts < quantum)
-            cpuTime += (*currentProcess).remainingBursts;
-          else
-            cpuTime += quantum;
-          (*currentProcess).finishTime = cpuTime;
-          if (arr[i] == 1)
-            (*currentProcess).turnanroundTime +=
-                (*currentProcess).finishTime - (*currentProcess).arrivalTime;
-          if ((*currentProcess).remainingBursts >= quantum)
-            (*currentProcess).remainingBursts -= quantum;
-          else
-            (*currentProcess).remainingBursts = 0;
-          RR.push_back(*currentProcess);
-          arr[i]--;
+        if (currentProcess.arrivalTime > cpuTime &&
+            currentProcess.arrivalTime >= cpuTime + contextSwitch) {
+          idleTime += currentProcess.arrivalTime - cpuTime;
+          cpuTime += currentProcess.arrivalTime - cpuTime;
+        } else {
+          cpuTime += contextSwitch;
+          idleTime += contextSwitch;
         }
-        if (1 + currentProcess != NULL)
-          ++currentProcess;
-        else
-          currentProcess = &processes[0];
-        if (i < n)
-          i++;
-        else
-          i = 0;
 
-        for (int j = 0; j < n; j++) {
+        if (currentProcess.remainingBursts < quantum)
+          cpuTime += currentProcess.remainingBursts;
+        else
+          cpuTime += quantum;
+        currentProcess.finishTime = cpuTime;
+
+        if (arr[i] == ceil(processes[i].cpuBursts / quantum)) {
+          processes[i].startTime = currentProcess.startTime;
+        }
+        if (arr[i] == 1) {
+          processes[i].finishTime = currentProcess.finishTime;
+          processes[i].turnanroundTime =
+              processes[i].finishTime - processes[i].startTime;
+          processes[i].remainingBursts = 0;
+        } else
+          processes[i].remainingBursts -= quantum;
+
+        RR.push_back(currentProcess);
+        arr[i]--;
+
+        i = (i + 1) % n;
+        currentProcess = processes[i];
+        for (j = 0; j < n; j++) {
           if (arr[j] == 0)
             flag++;
         }
       }
+
+      // for (int i = 0; flag != n - 1;) {
+      //   flag = 0;
+      //   if (arr[i] > 0) {
+      //     if (ceil(processes[i].cpuBursts / quantum) == arr[i]) {
+      //       (*currentProcess).startTime = tempST = cpuTime;
+      //       (*currentProcess).waitingTime +=
+      //           (*currentProcess).startTime - (*currentProcess).arrivalTime;
+      //     } else {
+      //       tempST = cpuTime;
+      //       (*currentProcess).waitingTime +=
+      //           (*currentProcess).startTime - (*currentProcess).finishTime;
+      //     }
+
+      //     if ((*currentProcess).remainingBursts < quantum)
+      //       cpuTime += (*currentProcess).remainingBursts;
+      //     else
+      //       cpuTime += quantum;
+      //     (*currentProcess).finishTime = cpuTime;
+      //     if (arr[i] == 1)
+      //       (*currentProcess).turnanroundTime +=
+      //           (*currentProcess).finishTime - (*currentProcess).arrivalTime;
+      //     if ((*currentProcess).remainingBursts >= quantum)
+      //       (*currentProcess).remainingBursts -= quantum;
+      //     else
+      //       (*currentProcess).remainingBursts = 0;
+      //     RR.push_back(*currentProcess);
+      //     arr[i]--;
+      //   }
+      //   if (1 + currentProcess != NULL)
+      //     ++currentProcess;
+      //   else
+      //     currentProcess = &processes[0];
+      //   if (i < n)
+      //     i++;
+      //   else
+      //     i = 0;
+
+      //   for (int j = 0; j < n; j++) {
+      //     if (arr[j] == 0)
+      //       flag++;
+      //   }
+      // }
 
       ganttChartandDetails(RR, cpuTime, idleTime);
       processesDetails(processes, cpuTime, idleTime);
