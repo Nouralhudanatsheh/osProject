@@ -268,7 +268,7 @@ public:
         } else {
           it = std::find_if(processes.begin(), processes.end(),
                             findPID(currentProcess.pid));
-          int id = it - processes.begin();
+          int id = (*it).pid;
           cpuTime += currentProcess.remainingBursts;
           currentProcess.remainingBursts = processes[id].remainingBursts = 0;
           currentProcess.finishTime = processes[id].finishTime = cpuTime;
@@ -279,10 +279,10 @@ public:
 
         RR.push_back(currentProcess);
 
-        if ((1 + vectorProcess) == NULL && readyQ.empty())
+        if ((vectorProcess == &processes.back()) && readyQ.empty())
           break;
 
-        if ((1 + vectorProcess) != NULL &&
+        if ((vectorProcess != &processes.back()) &&
             (*(1 + vectorProcess)).arrivalTime <= cpuTime) {
           idleTime += contextSwitch;
           cpuTime += contextSwitch;
@@ -304,6 +304,7 @@ public:
         }
       }
 
+      ganttChartandDetails(RR, cpuTime, idleTime);
     } else
       cout << "no processes found";
   }
@@ -313,7 +314,7 @@ public:
 
 int main() {
   schedulingAlg test;
-  test.test();
+  test.RR();
 
   return 0;
 }
