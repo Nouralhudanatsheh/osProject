@@ -1,6 +1,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -42,7 +43,11 @@ private:
       return p1.remainingBursts > p2.remainingBursts;
     }
   };
-
+  struct findPID {
+    int id;
+    findPID(int id) : id(id) {}
+    bool operator()(const Process &P) const { return P.pid == id; }
+  };
   void ganttChartandDetails(vector<Process> processes, float cpuTime,
                             float idleTime) {
 
@@ -168,8 +173,7 @@ public:
 
       for (int i = 1; i < processes.size(); i++) {
 
-        if (processes[i].arrivalTime > cpuTime &&
-            processes[i].arrivalTime >= cpuTime + contextSwitch) {
+        if (processes[i].arrivalTime > cpuTime) {
           idleTime += processes[i].arrivalTime - cpuTime;
           cpuTime += processes[i].arrivalTime - cpuTime;
         } else {
@@ -244,107 +248,61 @@ public:
   void RR() {
     if (!processes.empty()) {
       atSorting();
-      const int n = processes.size();
-      int arr[n];
-      for (int i = 0; i < n; i++)
-        arr[i] = ceil(processes[i].cpuBursts / quantum);
-
       for (int i = 0; i < processes.size(); i++)
         processes[i].remainingBursts = processes[i].cpuBursts;
-      // Process *currentProcess = &processes[0];
+
+      Process *vectorProcess = &processes[0];
+      std::vector<Process>::iterator it;
+      Process currentProcess = processes[0];
+      vector<Process> RR;
+      queue<Process> readyQ;
       float cpuTime = processes[0].arrivalTime;
       float idleTime = processes[0].arrivalTime;
-      vector<Process> RR;
-
-      Process currentProcess = processes[0];
-      int tempST;
-      int flag = 0;
-      int j;
-      for (int i = 0; flag < n; i++) {
+      while (true) {
         currentProcess.startTime = cpuTime;
-
-        if (currentProcess.arrivalTime > cpuTime &&
-            currentProcess.arrivalTime >= cpuTime + contextSwitch) {
-          idleTime += currentProcess.arrivalTime - cpuTime;
-          cpuTime += currentProcess.arrivalTime - cpuTime;
-        } else {
-          cpuTime += contextSwitch;
-          idleTime += contextSwitch;
-        }
-
-        if (currentProcess.remainingBursts < quantum)
-          cpuTime += currentProcess.remainingBursts;
-        else
+        if (currentProcess.remainingBursts > quantum) {
           cpuTime += quantum;
-        currentProcess.finishTime = cpuTime;
+          currentProcess.finishTime = cpuTime;
+          currentProcess.remainingBursts -= quantum;
+          readyQ.push(currentProcess);
+        } else {
+          it = std::find_if(processes.begin(), processes.end(),
+                            findPID(currentProcess.pid));
+          int id = it - processes.begin();
+          cpuTime += currentProcess.remainingBursts;
+          currentProcess.remainingBursts = processes[id].remainingBursts = 0;
+          currentProcess.finishTime = processes[id].finishTime = cpuTime;
 
-        if (arr[i] == ceil(processes[i].cpuBursts / quantum)) {
-          processes[i].startTime = currentProcess.startTime;
+          processes[id].turnanroundTime =
+              processes[id].finishTime - processes[id].arrivalTime;
         }
-        if (arr[i] == 1) {
-          processes[i].finishTime = currentProcess.finishTime;
-          processes[i].turnanroundTime =
-              processes[i].finishTime - processes[i].startTime;
-          processes[i].remainingBursts = 0;
-        } else
-          processes[i].remainingBursts -= quantum;
 
         RR.push_back(currentProcess);
-        arr[i]--;
 
-        i = (i + 1) % n;
-        currentProcess = processes[i];
-        for (j = 0; j < n; j++) {
-          if (arr[j] == 0)
-            flag++;
+        if ((1 + vectorProcess) == NULL && readyQ.empty())
+          break;
+
+        if ((1 + vectorProcess) != NULL &&
+            (*(1 + vectorProcess)).arrivalTime <= cpuTime) {
+          idleTime += contextSwitch;
+          cpuTime += contextSwitch;
+          currentProcess = *(++vectorProcess);
+
+        } else if (readyQ.empty()) {
+          currentProcess = *(++vectorProcess);
+          idleTime += currentProcess.arrivalTime - cpuTime;
+          cpuTime += currentProcess.arrivalTime - cpuTime;
+
+        } else {
+          if (currentProcess.pid != readyQ.front().pid) {
+            idleTime += contextSwitch;
+            cpuTime += contextSwitch;
+          }
+          currentProcess = readyQ.front();
+
+          readyQ.pop();
         }
       }
-
-      // for (int i = 0; flag != n - 1;) {
-      //   flag = 0;
-      //   if (arr[i] > 0) {
-      //     if (ceil(processes[i].cpuBursts / quantum) == arr[i]) {
-      //       (*currentProcess).startTime = tempST = cpuTime;
-      //       (*currentProcess).waitingTime +=
-      //           (*currentProcess).startTime - (*currentProcess).arrivalTime;
-      //     } else {
-      //       tempST = cpuTime;
-      //       (*currentProcess).waitingTime +=
-      //           (*currentProcess).startTime - (*currentProcess).finishTime;
-      //     }
-
-      //     if ((*currentProcess).remainingBursts < quantum)
-      //       cpuTime += (*currentProcess).remainingBursts;
-      //     else
-      //       cpuTime += quantum;
-      //     (*currentProcess).finishTime = cpuTime;
-      //     if (arr[i] == 1)
-      //       (*currentProcess).turnanroundTime +=
-      //           (*currentProcess).finishTime - (*currentProcess).arrivalTime;
-      //     if ((*currentProcess).remainingBursts >= quantum)
-      //       (*currentProcess).remainingBursts -= quantum;
-      //     else
-      //       (*currentProcess).remainingBursts = 0;
-      //     RR.push_back(*currentProcess);
-      //     arr[i]--;
-      //   }
-      //   if (1 + currentProcess != NULL)
-      //     ++currentProcess;
-      //   else
-      //     currentProcess = &processes[0];
-      //   if (i < n)
-      //     i++;
-      //   else
-      //     i = 0;
-
-      //   for (int j = 0; j < n; j++) {
-      //     if (arr[j] == 0)
-      //       flag++;
-      //   }
-      // }
-
-      ganttChartandDetails(RR, cpuTime, idleTime);
-      processesDetails(processes, cpuTime, idleTime);
 
     } else
       cout << "no processes found";
@@ -355,7 +313,7 @@ public:
 
 int main() {
   schedulingAlg test;
-  test.RR();
+  test.test();
 
   return 0;
 }
