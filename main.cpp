@@ -186,8 +186,10 @@ public:
             processes[i].startTime - processes[i].arrivalTime;
         cpuTime += processes[i].cpuBursts;
       }
-      cout << "First Come First Served Algorithm\n\n";
+      cout << "First Come First Served Algorithm\n";
       ganttChartandDetails(processes);
+      processesDetails(cpuTime, idleTime);
+
     } else
       cout << "no processes found";
   }
@@ -273,7 +275,7 @@ public:
 
           processes[index].turnanroundTime =
               processes[index].finishTime - processes[index].arrivalTime;
-          processes[index].waitingTime +=
+          processes[index].waitingTime =
               processes[index].turnanroundTime - processes[index].cpuBursts;
         }
 
@@ -304,6 +306,7 @@ public:
           readyQ.pop();
         }
       }
+      cout << "Round Robin Algorithm\n";
 
       ganttChartandDetails(RR);
       processesDetails(cpuTime, idleTime);
@@ -318,6 +321,7 @@ public:
 
 int main() {
   schedulingAlg test;
+  test.FCFS();
   test.RR();
 
   return 0;
