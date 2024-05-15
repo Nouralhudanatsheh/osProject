@@ -43,13 +43,8 @@ private:
       return p1.remainingBursts > p2.remainingBursts;
     }
   };
-  struct findPID {
-    int id;
-    findPID(int id) : id(id) {}
-    bool operator()(const Process &P) const { return P.pid == id; }
-  };
-  void ganttChartandDetails(vector<Process> processes, float cpuTime,
-                            float idleTime) {
+
+  void ganttChartandDetails(vector<Process> processes) {
 
     // lines for loop
     if (processes[0].arrivalTime != 0) {
@@ -82,7 +77,7 @@ private:
         cout << " ";
     }
     for (int i = 0; i < processes.size(); i++) {
-      if (i > 0 && processes[i].finishTime > processes[i - 1].finishTime) {
+      if (i > 0 && processes[i].startTime > processes[i - 1].finishTime) {
         cout << processes[i - 1].finishTime;
         for (int k = 0;
              k < processes[i].startTime - processes[i - 1].finishTime * 1.05;
@@ -97,21 +92,23 @@ private:
     }
     cout << processes[processes.size() - 1].finishTime << endl;
   }
-  void processesDetails(vector<Process> processes, float cpuTime,
-                        float idleTime) {
+  void processesDetails(float cpuTime, float idleTime) {
     cout << "\nCPU utilization = ((" << cpuTime << " - " << idleTime << ") / "
          << cpuTime << ") * 100% = " << (cpuTime - idleTime) * 100 / cpuTime
-         << "%" << endl;
-    cout << "\nDetails of each process:\n";
+         << "%\n"
+         << endl;
+
+    cout << "pid \t finish time \t turnaround time \t waiting time \t" << endl;
     for (int i = 0; i < processes.size(); i++) {
-      cout << ".process " << processes[i].pid
+      cout << " " << processes[i].pid
 
-           << " \n finish time: " << processes[i].finishTime
+           << "\t \t \t" << processes[i].finishTime << " \t \t \t \t"
 
-           << " \n turnaround time:" << processes[i].turnanroundTime
+           << processes[i].turnanroundTime <<
 
-           << " \n waiting time: " << processes[i].waitingTime << endl
-           << endl;
+          " \t\t\t \t \t " << processes[i].waitingTime << "\t " << endl;
+      ;
+      ;
     }
   }
 
@@ -139,7 +136,6 @@ private:
   }
 
 public:
-  // constructor to read data from file
   schedulingAlg() {
     ifstream fin;
     fin.open("/Users/nouralhudanatsheh/Documents/ppu/CSE 3rd year/2nd "
@@ -191,7 +187,7 @@ public:
         cpuTime += processes[i].cpuBursts;
       }
       cout << "First Come First Served Algorithm\n\n";
-      ganttChartandDetails(processes, cpuTime, idleTime);
+      ganttChartandDetails(processes);
     } else
       cout << "no processes found";
   }
@@ -251,7 +247,7 @@ public:
       for (int i = 0; i < processes.size(); i++)
         processes[i].remainingBursts = processes[i].cpuBursts;
 
-      Process *vectorProcess = &processes[0];
+      int i = 0;
       std::vector<Process>::iterator it;
       Process currentProcess = processes[0];
       vector<Process> RR;
@@ -260,36 +256,41 @@ public:
       float idleTime = processes[0].arrivalTime;
       while (true) {
         currentProcess.startTime = cpuTime;
+        int index;
+        for (index = 0; index < processes.size(); index++)
+          if (processes[index].pid == currentProcess.pid)
+            break;
         if (currentProcess.remainingBursts > quantum) {
           cpuTime += quantum;
           currentProcess.finishTime = cpuTime;
           currentProcess.remainingBursts -= quantum;
           readyQ.push(currentProcess);
         } else {
-          it = std::find_if(processes.begin(), processes.end(),
-                            findPID(currentProcess.pid));
-          int id = (*it).pid;
-          cpuTime += currentProcess.remainingBursts;
-          currentProcess.remainingBursts = processes[id].remainingBursts = 0;
-          currentProcess.finishTime = processes[id].finishTime = cpuTime;
 
-          processes[id].turnanroundTime =
-              processes[id].finishTime - processes[id].arrivalTime;
+          cpuTime += currentProcess.remainingBursts;
+          currentProcess.remainingBursts = processes[index].remainingBursts = 0;
+          currentProcess.finishTime = processes[index].finishTime = cpuTime;
+
+          processes[index].turnanroundTime =
+              processes[index].finishTime - processes[index].arrivalTime;
+          processes[index].waitingTime +=
+              processes[index].turnanroundTime - processes[index].cpuBursts;
         }
 
         RR.push_back(currentProcess);
 
-        if ((vectorProcess == &processes.back()) && readyQ.empty())
+        if ((i == processes.size() - 1) && readyQ.empty())
           break;
 
-        if ((vectorProcess != &processes.back()) &&
-            (*(1 + vectorProcess)).arrivalTime <= cpuTime) {
+        if ((i + 1 < processes.size()) &&
+            processes[i + 1].arrivalTime <= cpuTime) {
+          currentProcess = processes[++i];
+
           idleTime += contextSwitch;
           cpuTime += contextSwitch;
-          currentProcess = *(++vectorProcess);
 
         } else if (readyQ.empty()) {
-          currentProcess = *(++vectorProcess);
+          currentProcess = processes[++i];
           idleTime += currentProcess.arrivalTime - cpuTime;
           cpuTime += currentProcess.arrivalTime - cpuTime;
 
@@ -304,7 +305,10 @@ public:
         }
       }
 
-      ganttChartandDetails(RR, cpuTime, idleTime);
+      ganttChartandDetails(RR);
+      processesDetails(cpuTime, idleTime);
+      RR.clear();
+
     } else
       cout << "no processes found";
   }
