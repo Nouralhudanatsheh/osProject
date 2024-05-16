@@ -1,7 +1,5 @@
 
 #include <algorithm>
-#include <cstddef>
-#include <exception>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -134,6 +132,14 @@ private:
       FCFS.pop();
     }
   }
+  int findCPid(Process currentProcess) {
+    int index;
+    for (index = 0; index < processes.size(); index++)
+      if (processes[index].pid == currentProcess.pid)
+        break;
+
+    return index;
+  }
 
 public:
   schedulingAlg() {
@@ -150,7 +156,8 @@ public:
         Process p;
         p.pid = i;
         p.arrivalTime = arrivalTime;
-        p.cpuBursts = cpuBursts;
+        p.cpuBursts = p.remainingBursts = cpuBursts;
+
         processes.push_back(p);
       }
       fin.close();
@@ -184,6 +191,7 @@ public:
             processes[i].finishTime - processes[i].arrivalTime;
         processes[i].waitingTime =
             processes[i].startTime - processes[i].arrivalTime;
+        processes[i].remainingBursts = 0;
         cpuTime += processes[i].cpuBursts;
       }
       cout << "First Come First Served Algorithm\n";
@@ -198,59 +206,97 @@ public:
     if (!processes.empty()) {
       atSortingRT();
 
-      for (int i = 0; i < processes.size(); i++)
-        processes[i].remainingBursts = processes[i].cpuBursts;
-
-      priority_queue<Process, vector<Process>, compareSRTat> SRTQ;
-
-      int cpuTime = processes[0].arrivalTime;
+      int cpuTime = processes[0].startTime = processes[0].arrivalTime;
       int idleTime = processes[0].arrivalTime;
       Process currentProcess = processes[0];
-      vector<Process> SRTV;
-      SRTV.push_back(processes[0]);
-      vector<Process>::iterator it = processes.begin();
+      vector<Process> SRT;
+      priority_queue<Process, vector<Process>, compareSRTrt> readyQ;
+      int j = 1;
+      int i = 0;
+      int index = 0;
+      while (true) {
+        i = index;
+        index = findCPid(currentProcess);
+        if (i != index)
+          currentProcess.startTime = cpuTime;
 
-      cout << (*(5 + it)).arrivalTime << endl;
-      cout << (*it).arrivalTime;
-      // while (true) {
+        if (j < processes.size()) {
+          while (processes[j].arrivalTime != cpuTime) {
+            if (currentProcess.remainingBursts > 0) {
+              cpuTime++;
+              currentProcess.remainingBursts--;
+            } else {
+              currentProcess.remainingBursts =
+                  processes[index].remainingBursts = 0;
+              currentProcess.finishTime = processes[index].finishTime = cpuTime;
 
-      //   if (cpuTime == (*it++).arrivalTime &&
-      //       SRTQ.top().remainingBursts < currentProcess.remainingBursts)
+              processes[index].turnanroundTime =
+                  processes[index].finishTime - processes[index].arrivalTime;
+              processes[index].waitingTime =
+                  processes[index].turnanroundTime - processes[index].cpuBursts;
+              break;
+            }
+          }
 
-      //   {
-      //     currentProcess.finishTime = cpuTime;
-      //     currentProcess.waitingTime =
-      //         currentProcess.startTime - currentProcess.finishTime;
-      //     SRTV.push_back(currentProcess);
-      //     SRTQ.push(currentProcess);
-      //     cpuTime += contextSwitch;
-      //     idleTime += contextSwitch;
-      //     currentProcess = SRTQ.top();
-      //     currentProcess.startTime = cpuTime;
-      //     SRTQ.pop();
-      //   } else if (currentProcess.remainingBursts) {
-      //     currentProcess.remainingBursts--;
-      //     cpuTime++;
-      //   } else if (!SRTQ.empty())
-      //     currentProcess = SRTQ.top();
-      //   else
-      //     break;
-      //   ;
-      // }
+          if (currentProcess.remainingBursts == 0)
+            SRT.push_back(currentProcess);
+          else if (currentProcess.remainingBursts <
+                   processes[j].remainingBursts) {
+            readyQ.push(processes[j++]);
+
+            continue;
+          } else {
+
+            currentProcess.finishTime = cpuTime;
+            SRT.push_back(currentProcess);
+
+            readyQ.push(currentProcess);
+            readyQ.push(processes[j++]);
+          }
+
+        } else {
+
+          cpuTime += currentProcess.remainingBursts;
+          currentProcess.remainingBursts = processes[index].remainingBursts = 0;
+          currentProcess.finishTime = processes[index].finishTime = cpuTime;
+
+          processes[index].turnanroundTime =
+              processes[index].finishTime - processes[index].arrivalTime;
+          processes[index].waitingTime =
+              processes[index].turnanroundTime - processes[index].cpuBursts;
+          SRT.push_back(currentProcess);
+        }
+
+        if (j == processes.size() && readyQ.empty())
+          break;
+
+        if (readyQ.empty() && (j + 1 < processes.size())) {
+          currentProcess = processes[j++];
+          idleTime += currentProcess.arrivalTime - cpuTime;
+          cpuTime += currentProcess.arrivalTime - cpuTime;
+        } else if (!readyQ.empty()) {
+          if (currentProcess.pid != readyQ.top().pid) {
+            idleTime += contextSwitch;
+            cpuTime += contextSwitch;
+          }
+          currentProcess = readyQ.top();
+          readyQ.pop();
+        }
+      }
+      ganttChartandDetails(SRT);
+      processesDetails(cpuTime, idleTime);
+      // use find_if ,I think it might help
 
     }
 
     else
       cout << "no processes found";
   }
+
   void RR() {
     if (!processes.empty()) {
       atSorting();
-      for (int i = 0; i < processes.size(); i++)
-        processes[i].remainingBursts = processes[i].cpuBursts;
-
       int i = 0;
-      std::vector<Process>::iterator it;
       Process currentProcess = processes[0];
       vector<Process> RR;
       queue<Process> readyQ;
@@ -258,10 +304,7 @@ public:
       float idleTime = processes[0].arrivalTime;
       while (true) {
         currentProcess.startTime = cpuTime;
-        int index;
-        for (index = 0; index < processes.size(); index++)
-          if (processes[index].pid == currentProcess.pid)
-            break;
+        int index = findCPid(currentProcess);
         if (currentProcess.remainingBursts > quantum) {
           cpuTime += quantum;
           currentProcess.finishTime = cpuTime;
@@ -321,8 +364,7 @@ public:
 
 int main() {
   schedulingAlg test;
-  test.FCFS();
-  test.RR();
+  test.SRT();
 
   return 0;
 }
