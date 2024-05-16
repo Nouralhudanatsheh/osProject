@@ -91,25 +91,31 @@ private:
     cout << processes[processes.size() - 1].finishTime << endl;
   }
   void processesDetails(float cpuTime, float idleTime) {
-    cout << "\nCPU utilization = ((" << cpuTime << " - " << idleTime << ") / "
-         << cpuTime << ") * 100% = " << (cpuTime - idleTime) * 100 / cpuTime
-         << "%\n"
-         << endl;
 
-    cout << "pid \t finish time \t turnaround time \t waiting time \t" << endl;
+    cout << "\npid \t finish time \t waiting time \t turnaround time \t"
+         << endl;
     for (int i = 0; i < processes.size(); i++) {
       cout << " " << processes[i].pid
 
            << "\t \t \t" << processes[i].finishTime << " \t \t \t \t"
 
-           << processes[i].turnanroundTime <<
+           << processes[i].waitingTime <<
 
-          " \t\t\t \t \t " << processes[i].waitingTime << "\t " << endl;
-      ;
-      ;
+          " \t\t\t \t \t " << processes[i].turnanroundTime << "\t " << endl;
+    }
+    cout << "\nCPU utilization = ((" << cpuTime << " - " << idleTime << ") / "
+         << cpuTime << ") * 100% = " << (cpuTime - idleTime) * 100 / cpuTime
+         << "%\n"
+         << endl;
+  }
+  void processesClear() {
+
+    for (int i = 0; i < processes.size(); i++) {
+      processes[i].finishTime = processes[i].turnanroundTime =
+          processes[i].waitingTime = 0;
+      processes[i].remainingBursts = processes[i].cpuBursts;
     }
   }
-
   void atSorting() {
     priority_queue<Process, vector<Process>, compareFCFS> FCFS;
     for (int i = 0; i < processes.size(); i++) {
@@ -157,7 +163,6 @@ public:
         p.pid = i;
         p.arrivalTime = arrivalTime;
         p.cpuBursts = p.remainingBursts = cpuBursts;
-
         processes.push_back(p);
       }
       fin.close();
@@ -166,7 +171,7 @@ public:
 
   void FCFS() {
     if (!processes.empty()) {
-
+      processesClear();
       atSorting();
       float cpuTime = processes[0].finishTime =
           processes[0].arrivalTime + processes[0].cpuBursts;
@@ -204,10 +209,11 @@ public:
 
   void SRT() {
     if (!processes.empty()) {
+      processesClear();
       atSortingRT();
 
-      int cpuTime = processes[0].startTime = processes[0].arrivalTime;
-      int idleTime = processes[0].arrivalTime;
+      float cpuTime = processes[0].startTime = processes[0].arrivalTime;
+      float idleTime = processes[0].arrivalTime;
       Process currentProcess = processes[0];
       vector<Process> SRT;
       priority_queue<Process, vector<Process>, compareSRTrt> readyQ;
@@ -247,7 +253,6 @@ public:
 
             currentProcess.finishTime = cpuTime;
             SRT.push_back(currentProcess);
-
             readyQ.push(currentProcess);
             readyQ.push(processes[j++]);
           }
@@ -283,9 +288,11 @@ public:
           readyQ.pop();
         }
       }
+
+      cout << "\nShortest Remaining Time Served Algorithm\n";
       ganttChartandDetails(SRT);
       processesDetails(cpuTime, idleTime);
-      // use find_if ,I think it might help
+      SRT.clear();
 
     }
 
@@ -295,6 +302,7 @@ public:
 
   void RR() {
     if (!processes.empty()) {
+      processesClear();
       atSorting();
       int i = 0;
       Process currentProcess = processes[0];
@@ -349,7 +357,7 @@ public:
           readyQ.pop();
         }
       }
-      cout << "Round Robin Algorithm\n";
+      cout << "\nRound Robin Algorithm\n";
 
       ganttChartandDetails(RR);
       processesDetails(cpuTime, idleTime);
@@ -358,13 +366,10 @@ public:
     } else
       cout << "no processes found";
   }
-}
-
-;
+};
 
 int main() {
   schedulingAlg test;
-  test.SRT();
-
+  test.FCFS();
   return 0;
 }
