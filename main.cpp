@@ -75,7 +75,7 @@ private:
         cout << " ";
     }
     for (int i = 0; i < processes.size(); i++) {
-      if (i > 0 && processes[i].startTime > processes[i - 1].finishTime) {
+      if (i > 0 && processes[i].startTime != processes[i - 1].finishTime) {
         cout << processes[i - 1].finishTime;
         for (int k = 0;
              k < processes[i].startTime - processes[i - 1].finishTime * 1.05;
@@ -225,23 +225,21 @@ public:
             if (currentProcess.remainingBursts > 0) {
               cpuTime++;
               currentProcess.remainingBursts--;
-            } else {
-              currentProcess.remainingBursts =
-                  processes[index].remainingBursts = 0;
-              currentProcess.finishTime = processes[index].finishTime = cpuTime;
-
-              processes[index].turnanroundTime =
-                  processes[index].finishTime - processes[index].arrivalTime;
-              processes[index].waitingTime =
-                  processes[index].turnanroundTime - processes[index].cpuBursts;
+            } else
               break;
-            }
           }
 
-          if (currentProcess.remainingBursts == 0)
+          if (currentProcess.remainingBursts == 0) {
+            currentProcess.remainingBursts = processes[index].remainingBursts =
+                0;
+            currentProcess.finishTime = processes[index].finishTime = cpuTime;
+            processes[index].turnanroundTime =
+                processes[index].finishTime - processes[index].arrivalTime;
+            processes[index].waitingTime =
+                processes[index].turnanroundTime - processes[index].cpuBursts;
             SRT.push_back(currentProcess);
-          else if (currentProcess.remainingBursts <
-                   processes[j].remainingBursts) {
+          } else if (currentProcess.remainingBursts <=
+                     processes[j].remainingBursts) {
             readyQ.push(processes[j++]);
 
             continue;
@@ -259,7 +257,6 @@ public:
           cpuTime += currentProcess.remainingBursts;
           currentProcess.remainingBursts = processes[index].remainingBursts = 0;
           currentProcess.finishTime = processes[index].finishTime = cpuTime;
-
           processes[index].turnanroundTime =
               processes[index].finishTime - processes[index].arrivalTime;
           processes[index].waitingTime =
@@ -270,12 +267,15 @@ public:
         if (j == processes.size() && readyQ.empty())
           break;
 
-        if (readyQ.empty() && (j + 1 < processes.size())) {
+        if (readyQ.empty() && (j < processes.size())) {
           currentProcess = processes[j++];
           idleTime += currentProcess.arrivalTime - cpuTime;
           cpuTime += currentProcess.arrivalTime - cpuTime;
         } else if (!readyQ.empty()) {
           if (currentProcess.pid != readyQ.top().pid) {
+            if ((j < processes.size()) &&
+                (cpuTime + contextSwitch) > processes[j].arrivalTime)
+              readyQ.push(processes[j++]);
             idleTime += contextSwitch;
             cpuTime += contextSwitch;
           }
