@@ -338,7 +338,6 @@ public:
         if ((i + 1 < processes.size()) &&
             processes[i + 1].arrivalTime <= cpuTime) {
           currentProcess = processes[++i];
-
           idleTime += contextSwitch;
           cpuTime += contextSwitch;
 
@@ -371,5 +370,7 @@ public:
 int main() {
   schedulingAlg test;
   test.FCFS();
+  test.SRT();
+  test.RR();
   return 0;
 }
